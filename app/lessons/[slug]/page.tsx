@@ -42,7 +42,7 @@ export default async function LessonPage({
       </p>
 
       <article className='prose prose-lg prose-slate'>
-        <div dangerouslySetInnerHTML={{ __html: content }} />
+        <MDXRemote source={content} />
       </article>
     </div>
   );
