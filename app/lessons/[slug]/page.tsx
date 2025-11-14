@@ -1,38 +1,39 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { MDXRemote } from 'next-mdx-remote/rsc';
+import { remark } from 'remark';
+import html from 'remark-html';
+import gfm from 'remark-gfm';
 
-// // 🔹 This runs before your page renders
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params; // ✅ now we await it
-  // Read the markdown file based on the slug
+type LessonPageProps = {
+  params: { slug: string } | Promise<{ slug: string }>;
+};
+
+export async function generateMetadata({ params }: LessonPageProps) {
+  const resolvedParams = await params;
+  const { slug } = resolvedParams;
+
   const filePath = path.join(process.cwd(), 'app', 'contents', `${slug}.mdx`);
   const fileContent = fs.readFileSync(filePath, 'utf-8');
-  // Parse the front matter
   const { data } = matter(fileContent);
-  // Return the metadata
+
   return {
     title: data.title,
     description: data.description,
   };
 }
 
-export default async function LessonPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params; // ✅ now we await it
+export default async function LessonPage({ params }: LessonPageProps) {
+  const resolvedParams = await params;
+  const { slug } = resolvedParams;
 
   const filePath = path.join(process.cwd(), 'app', 'contents', `${slug}.mdx`);
   const fileContent = fs.readFileSync(filePath, 'utf-8');
 
   const { content, data } = matter(fileContent);
+
+  // ✅ Use remark-gfm to support tables, strikethrough, and checklists
+  const processedContent = await remark().use(gfm).use(html).process(content);
 
   return (
     <div className='max-w-2xl mx-auto py-10 px-6'>
@@ -41,8 +42,10 @@ export default async function LessonPage({
         By {data.author} — {data.date}
       </p>
 
-      <article className='prose prose-lg prose-slate'>
-        <MDXRemote source={content} />
+      <article className='prose prose-lg prose-slate mt-6'>
+        <div
+          dangerouslySetInnerHTML={{ __html: processedContent.toString() }}
+        />
       </article>
     </div>
   );
